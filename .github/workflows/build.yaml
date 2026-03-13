@@ -7,42 +7,13 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - platform: android
-            os: ubuntu-latest
-          - platform: windows
-            os: Windows-2022
-            arch: amd64
-          - platform: linux
-            os: ubuntu-22.04
-            arch: amd64
-          - platform: macos
-            os: macos-15-intel
-            arch: amd64
-          - platform: macos
-            os: macos-latest
-            arch: arm64
-          - platform: linux
-            os: ubuntu-24.04-arm
-            arch: arm64
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
-
-      - name: Setup Android Signing
-        if: startsWith(matrix.platform, 'android')
-        run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > android/app/keystore.jks
-          echo "${{ secrets.SERVICE_JSON }}" | base64 --decode > android/app/google-services.json
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/local.properties
-          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/local.properties
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/local.properties
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -52,18 +23,9 @@ jobs:
             core/go.sum
 
       - name: Setup Flutter
-        if: ${{ !(startsWith(matrix.os, 'windows-11-arm') || startsWith(matrix.os, 'ubuntu-24.04-arm')) }}
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.35.7
-          cache: true
-
-      - name: Setup Flutter With Other
-        if: startsWith(matrix.os, 'windows-11-arm') || startsWith(matrix.os, 'ubuntu-24.04-arm')
-        uses: subosito/flutter-action@v2
-        with:
-          channel: master
           flutter-version: 3.35.7
           cache: true
 
@@ -73,12 +35,12 @@ jobs:
           flutter pub get
 
       - name: Build
-        run: dart setup.dart ${{ matrix.platform }} ${{ matrix.arch && format('--arch {0}', matrix.arch) }}
+        run: dart setup.dart linux --arch amd64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) }}
+          name: artifact-linux-amd64
           path: ./dist
           if-no-files-found: error
           overwrite: true
